@@ -1,0 +1,91 @@
+v2.0.0
+2015/11/08
+
+    - Support 2GB+ messages as long as platform off_t is large enough.
+
+    - Support asynchronous ClamAV scanning using pthreads.
+
+    - Support message trickling: Send small message pieces to the
+      recipient while the adapter downloads and analyses the message.
+      The recipient is unlikely to terminate the connection if the
+      data keeps trickling in.
+
+    - Significantly improved configuration documentation in README.
+
+    - Deprecated huge_size in favor of the new message_size_max.
+
+    - Fixed out-of-source build.
+
+
+    The following changes may be of interest to developers following
+    this code or triaging host application regressions:
+
+    - Calling Xaction::stop() is no longer mandatory, resolving an XXX
+      that wanted the host transaction to call stop() for non-
+      start()ed adapter transactions!
+
+    - Adapter now throws if the host application requests invalid
+      adapted body offset. We used to return an empty area instead.
+
+    - Made GCC -Wvla -Wshadow -Wempty-body -Wunused-parameter happy.
+
+    - More consistent source code formatting using UniForm/uncrustify.
+
+
+v1.0.0
+2014/09/02
+    - Support, require, and check for libecap v1.0.
+
+    - Fixed build failure due to missing <unistd.h> #include.
+    - LP Bug #800281: Initialization failure after squid -k reconfigure.
+    - LP Bug #1025567: Service constructor segfault during adapter loading.
+
+v0.2.1
+2011/04/06
+
+    - Fixed build failure due to missing config.h #include file.
+
+
+v0.2.0
+2011/03/15
+
+    - Support, require, and check for libecap v0.2.
+
+    - Supply detected virus ID to the host application via the eCAP
+      X-Virus-ID meta-header. The host may log the supplied virus ID with
+      other transaction details or perform other host-specific
+      notification actions.
+
+    - Made unknown service options a fatal configuration error as opposed
+      to just a warning.
+
+    - Added debug=full|none ClamAV service option to enable debugging.
+      This feature is based on undocumented cl_debug() ClamAV API and
+      suffers from that API limitations: If enabled for one service, all
+      services will be debugged, and debugging can no longer be turned
+      off. More work is needed (using unstable ClamAV debugging callback
+      interfaces) to make debugging usable beyond lab tests.
+
+
+v0.1.1
+2011/01/09
+
+    - Fixed stuck transactions, typically visible with large bodies.
+
+    - Use GPL v2, the minimally restrictive license allowed by libclamav.
+
+    - Updated documentation.
+
+
+v0.1.0
+2010/12/17
+
+    - First external release, after a major rewrite.
+      Requires libecap v0.1.
+
+
+v0.0.2
+2008/09/30
+
+    - First internal release.
+      Requires libecap v0.0.3.

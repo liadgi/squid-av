@@ -1,0 +1,197 @@
+v1.0.0
+2013/09/17
+
+	Set current library ABI version to 3:0:0, due to the following
+	API changes documented in doc/async.txt and doc/registration.txt:
+
+	- Support asynchronous (e.g., threaded) adapters to accommodate
+	  eCAP services that require long blocking operations or even
+	  implement their own I/O and event loops.
+
+	- Allow the host application to check the libecap version used
+	  to build the adapter module as well as the libecap version
+	  that the host application itself is being dynamically linked
+	  with. This prevents v1 host applications from accidentally
+	  loading v0 adapters and then mysteriously crashing.
+
+	- Allow adapters and their host application to share pointers to
+	  transactions by changing Service::makeXaction() result type to
+	  libecap::shared_ptr (the exact new return type is typedefed as
+	  Service::MadeXactionPointer). This change helps asynchronous
+	  adapters to safely catalog pending transactions. The host
+	  application remains the primary owner of the transaction, so
+	  adapters wishing to catalog transactions should probably use
+	  weak pointers (libecap::weak_ptr).
+
+	Other changes:
+
+	- Removed the Callable API and common/call.h. No users of that
+	experimental feature are known. Adapters and host applications
+	may continue to provide the callable() method if they are using
+	it themselves, but it was very unlikely to be used by the other
+	side of the transaction in v0 and will be ignored in v1.
+
+	- Polished source code.
+
+
+v0.2.0
+2011/02/18
+
+	Added libtool library version info and set current library API
+	version to 2:0:0, due to the following API changes:
+
+	- Replaced Config API with a more general Options API. Options
+	  can be queried individually by name, which is often much
+	  faster than iteration through all options using the
+	  visitEachOption() method. (On the other hand, it is not yet
+	  clear whether any decent host or adapter can afford to ignore
+	  unknown options so we will remove by-name access in the future
+	  unless we see it being used for something worth supporting;
+	  feedback welcomed!).
+
+	  Existing adapter::Service::configure()/reconfigure()
+	  implementations and callers will need to be adjusted to use
+	  the new Options argument.
+	
+	- Adapter and host transactions now provide Options API, which
+	  allows them to exchange meta-information with each other. The
+	  purpose of this addition is to enable exchanges similar to
+	  ICAP headers (not to be confused with encapsulated HTTP
+	  headers!).
+
+	  For example, an anti-virus adapter may report the detected
+	  virus information to the host application for logging or block
+	  page generation, without requiring eCAP and the host
+	  application to know anything about viruses.
+
+	  Existing Xaction implementations will need to provide
+	  options() and visitEachOption() methods, implementing the
+	  Options class API. The simplest implementation is to do
+	  nothing.
+
+	- Added safe conversion of Area to bool. It is commonly used for
+	  testing the results of methods that return Area and treat
+	  empty area specially.
+
+	  Existing code that defined custom Area comparison operators
+	  may need to be adjusted.
+
+	- Added commonly used meta-information names such as
+	  X-Subscriber-ID and X-Virus-ID, based on popular ICAP
+	  extensions.
+
+
+	Other changes:
+
+	- Fix out-of-source-tree build.
+
+	- Add a pkg-config file for building external software easily.
+
+	  Adapters and host applications should consider using
+	  pkg-config to verify that they are being built with the right
+	  libecap version and to generate the right build flags.
+
+
+v0.1.0
+2010/12/17
+
+	Major API changes:
+
+	- Added fresh message creation API to support "request
+	  satisfaction" and other cases where cloning a virgin message
+	  is not possible or is awkward because the adapted message is
+	  not an adjusted version of the virgin one.
+	  
+	  It is not clear whether host::Host or host::Xaction should be
+	  responsible for creation of fresh messages. The former
+	  (host::Host) option is more flexible and might allow for some
+	  optimizations where some "constant" message is created once
+	  and then reused via cloning or even pointer sharing. The
+	  latter (host::Xaction) option may be required if host
+	  application must tie messages to transactions. We implemented
+	  the host::Host option, assuming there are not such
+	  applications, for now.
+
+
+	- Added API to "visit" name:value collections such as
+	  configuration or headers.
+	  
+	  This API currently allows adapters to read host-provided
+	  "inlined" service configuration parameters as well as iterate
+	  all available virgin HTTP header fields. See
+	  adapter::Service::configure() and Header::visitEach().
+	  
+	  The API does not dictate any specific storage implementation
+	  for the visited collections. The users do not get access to
+	  the collection as a whole, just the individual items, one
+	  item at a time.
+	  
+	  Eventually, the same API can be used by hosts/adapters to
+	  supply transaction meta-information to adapters/hosts. The
+	  purpose of such exchanges is similar to what ICAP
+	  request/response headers are being used for now (true ICAP
+	  headers, not HTTP headers embedded in ICAP message bodies).
+
+
+	- Added host::Xaction::blockVirgin() to allow host-administered
+	  message blocking.
+	  
+	  All HTTP proxies and modular ICAP servers we know about have
+	  some kind of built-in message blocking functionality. Yet,
+	  adapters often duplicate that with their own block messages.
+	  In many cases, adapter block messages are less powerful than
+	  host block messages (e.g., lack customizable configs or
+	  runtime language negotiation features).
+	  
+	  The new blockVirgin() interface allows the adapter to focus
+	  on the adaptation (including blocking) logic and leave the
+	  blocking message configuration, generation, and serving to
+	  the host application.
+	  
+	  In REQMOD, the request is blocked without getting to the
+	  origin server.  In RESPMOD, it is too late to block the
+	  request, but the client will not get access to the origin
+	  server response. In either case, the user receives a
+	  host-generated error message, such as HTTP 403 (Forbidden).
+
+
+	BUG fixes:
+
+	- Fixed flApplication logging constant value. The wrong value
+	  was outside the FrequencyLevel mask (0xF0) and, hence, was
+	  ignored by host applications.
+
+
+	Other:
+
+	- Added Transfer-Encoding header name.
+	  Many adapters will need that to determine expected message
+	  body size.
+
+	- Added efficient std::ostream writing operator for Area.
+
+	- Added file:lineno to TextException image.
+
+
+v0.0.3
+2010/12/05
+
+	- Fixed lp bug #327417: INT_MIN was not declared in this scope.
+
+	- Fixed lp bug #408091: libecap::adapter::Service::start() assertion.
+
+	- Fixed lp bug #672927: libcommon.a: No such file or directory 
+
+	- Updated sources to use newer autotools.
+
+	- Removed hopefully obsolete and unused C++ ./configure checks.
+
+	- Fixed GCC v4.1.2 warning: 'class libecap::Callable' has virtual
+	  functions but non-virtual destructor. The warning is gone in more
+	  recent GCC versions, but the fix should not break anything.
+
+
+v0.0.2
+2008/09/30
+
+	- First public release.

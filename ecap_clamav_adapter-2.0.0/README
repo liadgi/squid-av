@@ -1,0 +1,223 @@
+This eCAP adapter checks HTTP request and response bodies using the ClamAV
+antivirus library and denies access to messages with detected viruses.
+
+
+# Support
+
+Help, including commercial support and development, is available from
+The Measurement Factory (http://www.measurement-factory.com/).
+
+
+# Deployment
+
+The `INSTALL` file contains installation instructions. Configuration options are
+documented further below. Sample HTTP responses containing test virus signatures
+are available at
+
+* http://www.eicar.org/download/eicar.com
+* http://www.eicar.org/download/eicar.com.txt
+* http://www.eicar.org/download/eicar_com.zip
+* http://www.eicar.org/download/eicarcom2.zip
+
+
+# Message Trickling
+
+To help HTTP message recipients cope with potentially long message download and
+analysis times, you may configure the adapter to trickle small message pieces
+(called "drops") to the recipient, while the adapter downloads and analyses the
+message. The recipient is unlikely to terminate the connection if the data keeps
+trickling in, drop by drop...
+
+The downside of trickling is that the message headers and some body bytes are
+sent before the adapter knows the analysis result. Furthermore, once trickling
+starts it is no longer possible to block the offending message with an
+appropriate HTTP response. After the message headers are sent, it is only
+possible to forcefully terminate the ongoing message delivery. Depending on
+various environmental factors, the termination point, and message specifics, the
+truncated message recipient may be able to "use" the partially received message
+(e.g., execute the downloaded infected file). In some cases, the recipient may
+not even know that the message was truncated!
+
+Your trickling configuration ought to minimize the probability of at least one
+of the following bad events happening:
+
+* Connection timed out while waiting for the message headers. This happens when
+  trickling did not start fast enough. See `trickling_start_delay`.
+* The message got truncated when the virus was found. This happens when
+  trickling started too soon. See `trickling_start_delay`.
+* Connection timed out while waiting for body bytes. This happens when the next
+  body drop was not sent soon enough. See `trickling_period`.
+* Malicious content was sent. This may happen when too many drops were trickled
+  too soon. See `trickling_drop_size`, `trickling_size_max`, and
+  `trickling_period`.
+
+Trickling is disabled by default. To enable, use `trickling_drop_size`.
+
+The adapter may not be able to trickle a drop as scheduled for several reasons:
+
+* there are no body bytes available to send;
+* sending another body byte would risk sending the entire message body; and/or
+* sending another body byte would violate the `trickling_size_max` limit.
+
+The trickling algorithm never sends the entire message, even when the message
+body size is unknown. The only exception is a message with an unknown (a priori)
+body size that later happens to be exactly zero bytes in length. Such empty
+messages cannot have viruses in their bodies and would have been allowed anyway
+if the body size were known in advance.
+
+If started, trickling pauses when no more bytes can be sent and stops when the
+result of the message scan arrives.
+
+
+# Configuration
+
+Use the host application configuration interfaces (e.g., squid.conf in Squid
+v3.2 or later) to tune adapter behavior. Supported configuration options are
+documented below, in alphabetical order. All options have default values (i.e.,
+no option is required). All options support reconfiguration.
+
+
+## `async=yes|no`
+
+Whether to use threads when scanning messages. A `yes` setting requires building
+the adapter with POSIX threads (pthreads) support. Currently, a new thread is
+created for each message to be scanned, but that may be optimized in future
+versions.
+
+The default is `yes` if the adapter was built with pthreads support and `no`
+otherwise:
+
+    async=yes
+
+
+## `huge_size=bytes`
+
+This option is no longer supported. Use message_size_max instead.
+
+
+## `message_size_max=bytes`
+
+Allow messages with bodies exceeding the specified size without analysis. If the
+body size is unknown when the eCAP transaction starts, then the adapter will
+accumulate the message until it reaches the specified size and then allow the
+partially accumulated message without analysis.
+
+The adapter always allows messages exceeding internal size representation limit
+without analysis. On most modern platforms, that internal limit is 15 exbibytes
+(2^63 bytes). The actual internal limit is reported in the debugging log as
+`internal_accumulation_max`.
+
+Please keep in mind that libclamav has various hidden size limits of its own,
+but there is no documented API to change those.
+
+To analyze all messages regardless of their size, set `message_size_max` to
+`none`. Other valid values are unsigned integers representing the number of
+bytes in a message body. No size units are supported.
+
+The default is `none`:
+
+    message_size_max=none
+
+
+## `on_error=ACTION`
+
+Whether to block or allow the message being scanned when the scan fails.
+Blocking partially trickled messages leads to truncated messages.
+
+The default action is allow:
+
+    on_error=allow
+
+
+## `staging_dir=PATTERN`
+
+Where to put files for libclamav analysis. Libclamav API requires the adapter to
+write complete message bodies into files before the analysis can start. The
+specified pattern can be a directory name ending with a slash or a filename
+prefix. If the pattern does not end with a character "X", the adapter appends
+"XXXXXX" to allow for random file names (internally, the adapter uses mkstemp(3)
+POSIX function to create temporary files).
+
+A tricking adapter reads message body bytes from the staging file.
+
+To speedup I/O, it may be a good idea to use a RAM-based filesystem for the
+staging directory.
+
+
+The default is currently hard-coded to /tmp/eclamavXXXXXX:
+
+    staging_dir=/tmp/eclamavXXXXXX
+
+
+## `trickling_drop_size=bytes`
+
+The maximum single drop size when trickling. This option does not restrict the
+size of the first drop (i.e., the message headers which are always sent at once,
+without any size limits). The adapter may sent fewer bytes when approaching
+various other size limits (e.g., when approaching the end of the message).
+
+When set to zero, trickling is disabled. Other valid values are unsigned
+positive integers representing the desired number of bytes in a trickling drop.
+No size units are supported.
+
+The default is zero (i.e., no trickling):
+
+    trickling_drop_size=0
+
+To turn on trickling, use a few bytes, to keep the total amount of data trickled
+over time small. We speculate that using one byte increases your chances of
+running into an application with off-by-one errors.
+
+    trickling_drop_size=10
+
+
+## `trickling_period=seconds`
+
+The approximate minimum delay between two sequential trickling drops. The actual
+gap may drift due to temporary lack of message body bytes to trickle, various
+blocking events, performance bottlenecks, and host scheduling inaccuracies.
+Trickling is not meant to be used as a bandwidth shaping tool.
+
+When set to zero, trickling will happen approximately once every main loop
+iteration of the host application. Doing so defeats trickling intent and is
+likely to significantly increase the load on the host application.
+
+The valid values are zero and unsigned fractional numbers representing the
+desired number of seconds between trickling drops. No time units are supported.
+
+The default is ten seconds:
+
+    trickling_period=10.0
+
+
+## `trickling_size_max=bytes`
+
+The adapter transaction never trickles more than `trickling_size_max` body bytes
+(total). If the specified limit is reached, trickling stops.
+
+When `trickling_size_max` is set to `none`, the adapter observes no artificial
+trickling size limit (trickling may still be limited by other factors such as
+known body content length). Zero `trickling_size_max` means that only the
+message header is trickled; no body bytes are sent. The other valid values are
+unsigned numbers representing the total number of body bytes the adapter
+transaction may trickle. No size units are supported.
+
+There is no cumulative trickling size limit by default:
+
+    trickling_size_max=none
+
+
+## `trickling_start_delay=seconds`
+
+Delays the first trickling drop (i.e., sending the message header) approximately
+by the specified time. This initial delay may be used to give the AV analysis a
+chance to finish before trickling starts, avoiding some of the negative
+side­-effects of trickling. Increasing this delay eventually leads to connection
+timeouts that trickling is meant to avoid.
+
+The valid values are zero and unsigned fractional numbers representing the
+desired number of seconds before the first drop. No time units are supported.
+
+The default is one second:
+
+    trickling_start_delay=1.0

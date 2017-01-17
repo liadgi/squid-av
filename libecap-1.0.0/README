@@ -1,0 +1,10 @@
+The libecap library implements eCAP API in C++.
+
+The library can be built and installed from source, usually by running:
+
+        % ./configure
+        % make
+        % make install
+
+For additional documentation, sample adapter implementations, and support
+information, please visit the eCAP project web site: http://www.e-cap.org/

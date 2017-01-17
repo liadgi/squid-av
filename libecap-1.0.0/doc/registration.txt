@@ -1,0 +1,79 @@
+eCAP Adapter Registration API
+
+eCAP adapter registration API allows your adapter to inform the host
+application what eCAP services the adapter provides and what libecap version
+the adapter supports.
+
+
+* For the impatient:
+
+  // create the adapter and register with libecap to reach the host application
+  static const bool Registered = // this must be a global constant
+    libecap::RegisterVersionedService(new Adapter::Service);
+
+
+* Service registration rationale:
+
+When the host application loads your adapter library, it does not know
+anything about the adaptation service(s) your adapter offers to the host.
+Furthermore, the host application may load several adapters so it cannot call
+some well-known global adapter module function that will activate your service
+registration code because a single function will create a conflict among
+adapters.
+
+To solve this, libecap provides a "service registration" function called
+RegisterVersionedService(). Adapters create the services that they are going
+to provide and call that function with the corresponding service pointers. The
+registration code then forwards service pointers to the host application:
+
+  libecap::RegisterVersionedService(new Adapter::Service);
+
+
+It is the responsibility of the adapter code to call the registration function
+upon adapter module loading. This can be accomplished using C++ static
+initialization: The freshly loaded module automagically runs code used to
+initialize all global static variables:
+
+  static const bool Registered = // this must be a global constant
+    libecap::RegisterVersionedService(new Adapter::Service);
+  
+
+The above scheme assumes that the host application is already initialized and
+ready to register services. However, some adapter modules may be statically
+link into their host executables. With static initialization order being
+undefined, a service may be created and registered before the host
+application. To accommodate this scenario, libecap accumulates all service
+registrations until the host application registers itself. Once the host is
+registered, it receives all the services that got registered before and all
+the services that are going to register after it.
+
+As a side effect of this double registration approach, your service may be
+configured and started either during or after the RegisterVersionedService()
+call.
+
+
+* Service versioning rationale:
+
+What about the "Versioned" part of the RegisterVersionedService() API? The
+second parameter of the registration call must be the libecap library version
+that your adapter was compiled with. The correct value is provided by default.
+The version parameter is needed because it is impossible to safely extract the
+version information from the registered service if the Service class layout
+has changed between libecap version used to build the adapter and the libecap
+version of the code running now.
+
+There are actually three libecap library versions in play for every adapter
+service and host application pair:
+
+  1) libecap version used to compile the adapter,
+  2) libecap version used to compile the host application, and
+  3) libecap version dynamically linked with the host application at startup.
+
+The LIBECAP_VERSION macro provides the first two versions during compilation.
+The libecap::VersionString() function returns the last version. A good host
+application should check all three versions for compatibility before
+dereferencing any of the libecap class pointers.
+
+
+For a given pair of x and y, all x.y.* libecap versions (and only those
+versions) are meant to be binary compatible.
