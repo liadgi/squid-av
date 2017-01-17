@@ -17,47 +17,44 @@ Run:
 ```sh
 $ sudo ldconfig
 ```
-#
-#
+
+
 ### libecap-1.0.0:
-#
+
 ```sh
 $ ./configure && make && sudo make install
 ```
-#
-#
+
+
 ### c-vtapi-master:
-#
+
 ```sh
-$ autoreconf -fi
-$ ./configure
-$ make
-$ sudo make install
+$ autoreconf -fi ./configure && make && sudo make install
 ```
-#
-#
+
+
 ### ecap_clamav_adapter-2.0.0:
-#
+
 replace `"XXX"` in `src/Antivirus.cc` to our VT public key. Then run:
 ```sh
 $ ./configure
 ```
 in `src/Makefile`, edit the line 
 ```sh
-LIBS= 
+LIBS = 
 ```
 to
 ```sh 
-LIBS= -lcvtapi
+LIBS = -lcvtapi
 ```
 Then, run:
 ```sh
 $ make && sudo make install
 ```
-#
-#
+
+
 ### /squid-3.5.22:
-#
+
 ```sh
 $ ./configure --prefix=/usr \
 --localstatedir=/var \
@@ -84,12 +81,10 @@ sudo chmod a+w /var/run/squid.pid /var/log/squid/cache.log /var/log/squid/access
 At last, change system wide proxy settings:
 http://askubuntu.com/questions/342906/change-proxy-settings-in-ubuntu
 with our specific IP and port.
-#
-#
-#
+
 
 ## Debug squid:
-#
+
 ```sh
 gdb /usr/sbin/squid
 r -NCd1
