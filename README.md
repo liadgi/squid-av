@@ -53,7 +53,7 @@ $ make && sudo make install
 ```
 
 
-### /squid-3.5.22:
+### squid-3.5.22:
 
 ```sh
 $ ./configure --prefix=/usr \
@@ -71,6 +71,10 @@ Then:
 $ sudo make && sudo make install
 ```
 Replace `/etc/squid/squid.conf` with `squid.conf` supplied here.
+You can do it with (under project root directory):
+```sh
+yes | sudo cp -rf squid.conf /etc/squid/squid.conf
+```
 
 Run:
 ```sh
@@ -83,7 +87,7 @@ http://askubuntu.com/questions/342906/change-proxy-settings-in-ubuntu
 with our specific IP and port.
 
 
-## Debug squid:
+## Debug squid
 
 ```sh
 gdb /usr/sbin/squid
