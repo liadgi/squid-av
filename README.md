@@ -29,7 +29,7 @@ $ ./configure && make && sudo make install
 ### c-vtapi-master:
 
 ```sh
-$ autoreconf -fi ./configure && make && sudo make install
+$ autoreconf -fi && ./configure && make && sudo make install
 ```
 
 
