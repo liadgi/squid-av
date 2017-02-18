@@ -3,7 +3,7 @@ sudo apt-get update
 sudo apt-get install g++
 sudo apt-get install automake autoconf libtool libjansson-dev libcurl4-openssl-dev
 
-echo "/usr/local/lib" | sudo tee -a /etc/ld.so.conf
+echo "/usr/local/lib/" | sudo tee -a /etc/ld.so.conf
 sudo ldconfig
 
 cd libecap-1.0.0/ 
