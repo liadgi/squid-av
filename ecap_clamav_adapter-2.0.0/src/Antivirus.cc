@@ -25,7 +25,7 @@ void Adapter::Antivirus::blockingScan(Answer &answer)
 {
     //scan(answer);
     //keep_running = true;
-    scan("XXX", answer.fileName.c_str());
+    scan("c78338272f4444e3ae2ea3b4d192bf46e84796757874d688ae2731858c1ef5be", answer.fileName.c_str());
     answer.deliver();
 }
 
@@ -157,13 +157,21 @@ int Adapter::Antivirus::scan_stdinput(struct VtFile *scan, const char * file_nam
   return ret;
 }
 
+#define RESP_BUF_SIZE 255
+#define VT_RESPONSE_SUCCESS 1
+#define VT_RESPONSE_QUEUED -2
+#define VT_RESPONSE_UNPRESENT 0
 
 int Adapter::Antivirus::scan(const char * apikey, const char * filename) {
 
     struct VtFile *file_scan;
-    struct VtResponse *response;
-    char *str = NULL;
+    struct VtResponse *scanResponse, *reportResponse;
+    char *strScan = NULL, *strReport = NULL;
     int ret = 0;
+    int response_code;
+    int positives;
+    char buf[RESP_BUF_SIZE+1] = { 0, };
+    bool isFileClean = false;
 
     signal(SIGHUP, sighand_callback);
     signal(SIGTERM, sighand_callback);
@@ -177,17 +185,72 @@ int Adapter::Antivirus::scan(const char * apikey, const char * filename) {
       if (ret) {
         printf("Error: %d \n", ret);
       } else {
-        response = VtFile_getResponse(file_scan);
-        str = VtResponse_toJSONstr(response, VT_JSON_FLAG_INDENT);
-        if (str) {
-          printf("Response:\n%s\n", str);
-          //while () {
-            
-          //}
 
-          free(str);
+        scanResponse = VtFile_getResponse(file_scan);
+        ret = VtResponse_getResponseCode(scanResponse, &response_code);
+        if (!ret)
+        {
+          strScan = VtResponse_toJSONstr(scanResponse, VT_JSON_FLAG_INDENT);
+          if (strScan) {
+            printf("Scan Response:\n%s\n", strScan);
+            const char * resource = VtResponse_getString(scanResponse, "resource");
+
+            // polling for scan report
+            bool waitForReport = true;
+            while (waitForReport) {
+                ret = VtFile_report(file_scan, resource);
+               // PRINT("rescan ret=%d\n", ret);
+                if (ret) {
+                  printf("Error: %d \n", ret);
+                } else {
+                    reportResponse = VtFile_getResponse(file_scan);
+                    strReport = VtResponse_toJSONstr(reportResponse, VT_JSON_FLAG_INDENT);
+                    if (strReport) {
+                      printf("Report Response:\n%s\n", strReport);
+                      free(strReport);
+                    }
+
+                    VtResponse_getVerboseMsg(reportResponse, buf, RESP_BUF_SIZE);
+                    printf("Msg: %s\n", buf);
+
+                    ret = VtResponse_getResponseCode(reportResponse, &response_code);
+                    if (!ret) {
+                        printf("Report response code: %d\n", response_code);
+                        if (response_code == VT_RESPONSE_SUCCESS)
+                        {
+                          ret = VtResponse_getIntValue(reportResponse, "positives", &positives);
+                          if (!ret) {
+                            if (positives == 0) {
+                              isFileClean = true;
+                            } else {
+                              isFileClean = false;
+                            }
+                            waitForReport = false;
+                          }
+                          
+                        } else if (response_code == VT_RESPONSE_QUEUED) {
+
+                        } else { // item not available
+
+                        }
+                      }
+
+                        VtResponse_put(&reportResponse);
+                    }
+              if (waitForReport) {
+                sleep(20);
+              }
+            }
+
+            VtResponse_put(&scanResponse);
+
+            if (!isFileClean) { // discovered dangerous file
+              printf("Packet is dropped\n");
+            } else {
+              printf("Forward packet\n");
+            }
+          } 
         }
-        VtResponse_put(&response);
       }
 
       return 0;
