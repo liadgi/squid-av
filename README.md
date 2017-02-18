@@ -35,23 +35,10 @@ $ autoreconf -fi && ./configure && make && sudo make install
 
 ### ecap_clamav_adapter-2.0.0:
 
-replace `"XXX"` in `src/Antivirus.cc` to our VT public key. Then run:
+Run:
 ```sh
-$ ./configure
+$ env LIBS=" -lcvtapi" ./configure && make && sudo make install
 ```
-in `src/Makefile`, edit the line 
-```sh
-LIBS = 
-```
-to
-```sh 
-LIBS = -lcvtapi
-```
-Then, run:
-```sh
-$ make && sudo make install
-```
-
 
 ### squid-3.5.22:
 
