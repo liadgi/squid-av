@@ -22,7 +22,7 @@ cd ../squid-3.5.22/ && \
 --with-logdir=/var/log/squid \
 --with-pidfile=/var/run/squid.pid \
 --enable-ecap && \
-make && sudo make install
+sudo make && sudo make install
 
 cd ..
 yes | sudo cp -rf squid.conf /etc/squid/squid.conf
