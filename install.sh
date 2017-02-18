@@ -6,14 +6,18 @@ sudo apt-get install automake autoconf libtool libjansson-dev libcurl4-openssl-d
 echo "/usr/local/lib" | sudo tee -a /etc/ld.so.conf
 sudo ldconfig
 
-cd libecap-1.0.0/ && ./configure && make && sudo make install
+cd libecap-1.0.0/ 
+./configure && make && sudo make install
 
-cd ../c-vtapi-master/ && autoreconf -fi && ./configure && make && sudo make install
+cd ../c-vtapi-master/ 
+autoreconf -fi 
+./configure && make && sudo make install
 
-cd ../ecap_clamav_adapter-2.0.0/ && env LIBS=" -lcvtapi" ./configure && make && sudo make install
+cd ../ecap_clamav_adapter-2.0.0/
+env LIBS=" -lcvtapi" ./configure && make && sudo make install
 
-cd ../squid-3.5.22/ && \
-autoreconf -f -i && \
+cd ../squid-3.5.22/
+autoreconf -f -i
 ./configure --prefix=/usr \
 --localstatedir=/var \
 --libexecdir=${prefix}/lib/squid \
@@ -22,7 +26,7 @@ autoreconf -f -i && \
 --with-default-user=proxy \
 --with-logdir=/var/log/squid \
 --with-pidfile=/var/run/squid.pid \
---enable-ecap && \
+--enable-ecap 
 sudo make && sudo make install
 
 cd ..
