@@ -13,6 +13,7 @@ cd ../c-vtapi-master/ && autoreconf -fi && ./configure && make && sudo make inst
 cd ../ecap_clamav_adapter-2.0.0/ && env LIBS=" -lcvtapi" ./configure && make && sudo make install
 
 cd ../squid-3.5.22/ && \
+autoreconf -f -i && \
 ./configure --prefix=/usr \
 --localstatedir=/var \
 --libexecdir=${prefix}/lib/squid \
