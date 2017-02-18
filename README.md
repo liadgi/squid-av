@@ -11,7 +11,7 @@ $ sudo apt-get install automake autoconf libtool libjansson-dev libcurl4-openssl
 
 Add a new line to the file `/etc/ld.so.conf`: 
 ```sh
-/usr/local/lib
+$ echo "/usr/local/lib" | sudo tee -a /etc/ld.so.conf
 ```
 Run:
 ```sh
