@@ -3,13 +3,11 @@ sudo apt-get update
 sudo apt-get install g++
 sudo apt-get install automake autoconf libtool libjansson-dev libcurl4-openssl-dev
 
-echo "/usr/local/lib/" | sudo tee -a /etc/ld.so.conf
-sudo ldconfig
-
 cd libecap-1.0.0/ 
 ./configure && make && sudo make install
 
 cd ../c-vtapi-master/ 
+autoreconf -fi 
 autoreconf -fi 
 ./configure && make && sudo make install
 
@@ -33,4 +31,6 @@ cd ..
 yes | sudo cp -rf squid.conf /etc/squid/squid.conf
 
 sudo touch /var/run/squid.pid /var/log/squid/cache.log /var/log/squid/access.log 
-sudo chmod a+w /var/run/squid.pid /var/log/squid/cache.log /var/log/squid/access.log 
+sudo chmod a+w /var/run/squid.pid /var/log/squid/cache.log /var/log/squid/access.log
+
+sudo ldconfig 
