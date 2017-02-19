@@ -8,7 +8,7 @@ cd libecap-1.0.0/
 
 cd ../c-vtapi-master/ 
 autoreconf -fi 
-autoreconf -fi 
+autoreconf -fi # old bug - needs to run twice...
 ./configure && make && sudo make install
 
 cd ../ecap_clamav_adapter-2.0.0/
@@ -34,3 +34,7 @@ sudo touch /var/run/squid.pid /var/log/squid/cache.log /var/log/squid/access.log
 sudo chmod a+w /var/run/squid.pid /var/log/squid/cache.log /var/log/squid/access.log
 
 sudo ldconfig 
+
+sudo gsettings set org.gnome.system.proxy.http host '127.0.0.01'
+sudo gsettings set org.gnome.system.proxy.http port 3128
+sudo gsettings set org.gnome.system.proxy mode 'manual'
