@@ -25,7 +25,7 @@ void Adapter::Antivirus::blockingScan(Answer &answer)
 {
     //scan(answer);
     //keep_running = true;
-    scan("c78338272f4444e3ae2ea3b4d192bf46e84796757874d688ae2731858c1ef5be", answer.fileName.c_str());
+    scan(answer);
     answer.deliver();
 }
 
@@ -162,8 +162,10 @@ int Adapter::Antivirus::scan_stdinput(struct VtFile *scan, const char * file_nam
 #define VT_RESPONSE_QUEUED -2
 #define VT_RESPONSE_UNPRESENT 0
 
-int Adapter::Antivirus::scan(const char * apikey, const char * filename) {
+void Adapter::Antivirus::scan(Answer &answer) {
 
+    const char * api_key = "c78338272f4444e3ae2ea3b4d192bf46e84796757874d688ae2731858c1ef5be";
+    const char * filename = answer.fileName.c_str();
     struct VtFile *file_scan;
     struct VtResponse *scanResponse, *reportResponse;
     char *strScan = NULL, *strReport = NULL;
@@ -178,7 +180,7 @@ int Adapter::Antivirus::scan(const char * apikey, const char * filename) {
 
     file_scan = VtFile_new();
     VtFile_setProgressCallback(file_scan, progress_callback, NULL);
-    VtFile_setApiKey(file_scan, apikey);
+    VtFile_setApiKey(file_scan, api_key);
 
 
     ret = scan_file(file_scan, filename); // blocks
@@ -246,14 +248,14 @@ int Adapter::Antivirus::scan(const char * apikey, const char * filename) {
 
             if (!isFileClean) { // discovered dangerous file
               printf("Packet is dropped\n");
+              answer.statusCode = Answer::scVirus;
             } else {
               printf("Forward packet\n");
+              answer.statusCode = Answer::scClean;
             }
           } 
         }
       }
-
-      return 0;
 }
 
 int Adapter::Antivirus::report(const char * filename) {

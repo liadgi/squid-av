@@ -65,7 +65,7 @@ public:
 protected:
     // scan answer.filename and update the answer
     // called from either a scanner or a host thread
-    virtual void scan(Answer &answer) = 0;
+    //virtual void scan(Answer &answer) = 0;
 
     static void *AsyncScan(void *context);
 
@@ -84,7 +84,7 @@ protected:
     static int main2(int argc, char **argv);
 
 
-    static int scan(const char * apikey, const char * filename);
+    static void scan(Answer &answer);
     static int report(const char * filename);
 
 };

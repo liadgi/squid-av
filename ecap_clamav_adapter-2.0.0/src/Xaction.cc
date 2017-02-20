@@ -368,8 +368,15 @@ void Adapter::Xaction::noteVbContentDone(bool atEnd)
     libecap::shared_ptr<Antivirus> scanner = service->scanner;
     Must(scanner);
 
-    MyAnswer answer(vbFile->name(), self, 0 /* no queue */);
-    scanner->blockingScan(answer);
+    if (service->makesAsyncXactions()) {
+        MyAnswer *answer = new MyAnswer(vbFile->name(), self, service->answers);
+        scanner->asyncScan(answer);
+        // will eventually call our onAnswer() method, via answer->deliver()
+    } else {
+        MyAnswer answer(vbFile->name(), self, 0 /* no queue */);
+        scanner->blockingScan(answer);
+        // will call our onAnswer() method, via answer.deliver()
+    }
        
 
     ExitFailSafeMethod();
