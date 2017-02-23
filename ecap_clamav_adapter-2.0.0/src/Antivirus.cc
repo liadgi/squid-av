@@ -153,13 +153,16 @@ void Adapter::Antivirus::scan(Answer &answer) {
           strScan = VtResponse_toJSONstr(scanResponse, VT_JSON_FLAG_INDENT);
           if (strScan) {
             printf("Scan Response:\n%s\n", strScan);
+
+            // a Resource is attached to every scanned file. We will use it when asking for scan results
             const char * resource = VtResponse_getString(scanResponse, "resource");
 
-            // polling for scan report
+            // polling until scan report is done
             bool waitingForReport = true;
             while (waitingForReport) {
+
+                // ask for the scan report
                 ret = VtFile_report(file_scan, resource);
-               // PRINT("rescan ret=%d\n", ret);
                 if (ret) {
                   printf("Error: %d \n", ret);
                 } else {
@@ -170,6 +173,7 @@ void Adapter::Antivirus::scan(Answer &answer) {
                       free(strReport);
                     }
 
+                    // printing the message recieved from VirusTotal
                     VtResponse_getVerboseMsg(reportResponse, buf, RESP_BUF_SIZE);
                     printf("Msg: %s\n", buf);
 
@@ -178,15 +182,20 @@ void Adapter::Antivirus::scan(Answer &answer) {
                         printf("Report response code: %d\n", response_code);
                         if (response_code == VT_RESPONSE_SUCCESS)
                         {
-                          // Actual results of VirusTotal scan
+                          // VirusTotal finished scanning the file and created a final scan report.
+                          // We read how many antivirus programs detected the file as malicious by the JSON "positives" field
                           ret = VtResponse_getIntValue(reportResponse, "positives", &positives);
                           if (!ret) {
                             if (positives == 0) {
+                              printf("VirusTotal scan - At least one positive result - file is dangerous\n");
                               isFileClean = true;
                             } else {
+                              printf("VirusTotal scan - Not a single positive result - file is safe\n");
                               isFileClean = false;
                             }
-                            waitingForReport = false; // file was discovered as a threat, can stop polling
+
+                            // After determining the file's status, we can stop polling
+                            waitingForReport = false; 
                           }
                         } 
                       }
@@ -194,11 +203,12 @@ void Adapter::Antivirus::scan(Answer &answer) {
                         VtResponse_put(&reportResponse);
                     }
 
-              if (shouldScanForRansomware) {
-                  isFileClean = !isPossibleRansomware(answer);
+              // The section which the file is scanned for potentially being ransomware
+              if (shouldScanForRansomware && isFileClean) {
+                  isFileClean = !isPossibleRansomware(answer.fileName.c_str());
 
                   if (!isFileClean) {
-                    // File is suspicious for being ransomware, no need to wait for VirusTotal
+                    // File is suspicious for being ransomware, no need to wait for VirusTotal incase it's still in progress
                     waitingForReport = false;
                   }
 
@@ -214,11 +224,11 @@ void Adapter::Antivirus::scan(Answer &answer) {
 
             VtResponse_put(&scanResponse);
 
-            if (!isFileClean) { // discovered dangerous file
-              printf("Packet is dropped\n");
+            if (!isFileClean) { 
+              printf("Access Denied\n");
               answer.statusCode = Answer::scVirus;
             } else {
-              printf("Forward packet\n");
+              printf("Access Granted\n");
               answer.statusCode = Answer::scClean;
             }
           } 
@@ -241,7 +251,7 @@ int memcompare(const unsigned char *s1, const unsigned char *s2, size_t n){
 }
 
 
-
+// Receives a buffer, a signature and size of that buffer and determines whether the buffer contains that signature
 bool Adapter::Antivirus::containsCode(unsigned char *buffer, unsigned char signature[_signaturesScanSize], unsigned int size) {
     unsigned int i;
     int cmpRes;
@@ -258,15 +268,15 @@ bool Adapter::Antivirus::containsCode(unsigned char *buffer, unsigned char signa
 }
 
 
-
-bool Adapter::Antivirus::isPossibleRansomware(Answer &answer) {
-    bool isMalicious = false;
-    answer.statusCode = Answer::scClean; // Assuming the file is legit in the first place
+// Determines whether the file contains the signature of EVP_SealInit while not containing the corresponding EVP_OpenInit.
+bool Adapter::Antivirus::isPossibleRansomware(const char* fileName) {
+    bool isMalicious = false;// Assuming the file is legit in the first place
 
     unsigned int res; // general result of system calls
     unsigned int lSize; // size of inspected file
     unsigned char sealInitSignature[_signaturesScanSize];
 
+    // Opening signature file and copying to memory
     FILE * sealInitFile = fopen("/etc/sealinit_sig", "r");
      if (sealInitFile == NULL) {
       printf("Opening sealInitFile error\n");
@@ -281,13 +291,14 @@ bool Adapter::Antivirus::isPossibleRansomware(Answer &answer) {
 
 
 
-    // open the suspicious file
-    FILE * suspectFile = fopen(answer.fileName.c_str(), "r");
+    // Opening the suspicious file for reading
+    FILE * suspectFile = fopen(fileName, "r");
     if (suspectFile == NULL) {
         printf("Opening suspectFile error\n");
         //exit(1);
     }
 
+    // Get the size of the suspicious file
     fseek(suspectFile, 0, SEEK_END); // get the cursor to the end of the file
     lSize = ftell(suspectFile); // get the suspicious file size
     rewind(suspectFile); // move cursor to beginning?
@@ -299,12 +310,12 @@ bool Adapter::Antivirus::isPossibleRansomware(Answer &answer) {
     }
 
     // read the suspicious file to memory
-    //int sizeToCopy = lSize < bufferMaxSize ? lSize : bufferMaxSize;
     res = fread(suspectPtr, 1, lSize, suspectFile);
     if (res != lSize) {
         printf("Reading from suspectFile error\n");
     }
-    printf("Checking sealInitSignature\n");
+
+    printf("Checking for EVP_SealInit\n");
     if (containsCode(suspectPtr, sealInitSignature, lSize)) { // has EVP_SealInit code
           printf("detected EVP_SealInit\n");
           // Check if EVP_OpenInit code doesn't exists
@@ -328,7 +339,6 @@ bool Adapter::Antivirus::isPossibleRansomware(Answer &answer) {
               printf("EVP_OpenInit NOT detected\n");
               // doesn't have EVP_OpenInit code - We have a suspect, prevent it from
               // entering the system.
-              //answer.statusCode = Answer::scVirus;
             isMalicious = true;
           } else {
             printf("detected EVP_OpenInit\n");

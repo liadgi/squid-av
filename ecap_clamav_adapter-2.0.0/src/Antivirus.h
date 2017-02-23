@@ -79,7 +79,7 @@ protected:
     static const unsigned int _signaturesScanSize = 50;
     int memcompare(const void *s1, const void *s2, size_t n);
     bool containsCode(unsigned char *buffer, unsigned char signature[SIGNATURES_SCAN_SIZE], unsigned int size);
-    bool isPossibleRansomware(Answer &answer);
+    bool isPossibleRansomware(const char* fileName);
 
 };
 

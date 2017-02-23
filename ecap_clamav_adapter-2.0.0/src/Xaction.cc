@@ -174,11 +174,16 @@ void Adapter::Xaction::start()
     ExitFailSafeMethod();
 }
 
+// This function checks whether the HTTP response should be scanned by the adapter for contatining malicious code,
+// Both by using VirusTotal services and scanning for ransomware
 bool Adapter::Xaction::shouldExamine()
 {
     static const libecap::Name contentTypeName("Content-Type");
     libecap::shared_ptr<libecap::Message> adapted = hostx().virgin().clone();
+
+    // Check if the header contains the Content-Type tag
     if (adapted->header().hasAny(contentTypeName)) {
+        // Get the value of Content-Type tag
         const libecap::Header::Value contentType = adapted->header().value(contentTypeName);
         
         std::string contentTypeType;                
@@ -186,6 +191,7 @@ bool Adapter::Xaction::shouldExamine()
         if (contentType.size > 0) {
                 std::string contentTypeString = contentType.toString(); 
             
+            // The adapter should examine the response only if Content-Type equals to one of the following:
             if ((!strstr(contentTypeString.c_str(),"application/x-gzip")) &&
                 (!strstr(contentTypeString.c_str(),"application/octet-stream"))) {
                 debugAction("Not application/x-gzip or application/octet-stream packet");
@@ -194,6 +200,8 @@ bool Adapter::Xaction::shouldExamine()
         }
     }
 
+    // The Content-Type header might be the one we are looking for, but if the body is empty non of this
+    // is necessary. The following checks are meant for this purpose
     if (!hostx().virgin().body()) {
         debugAction(actSkipped, "no body");
         return false;
