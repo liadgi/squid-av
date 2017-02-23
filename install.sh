@@ -14,8 +14,8 @@ autoreconf -fi # old bug - needs to run twice...
 ./configure && make && sudo make install
 
 
-# compiling ecap_adapter
-cd ../ecap_clamav_adapter-2.0.0/
+# compiling InTruder
+cd ../InTruder_Adapter/
 env LIBS=" -lcvtapi" ./configure && make && sudo make install
 
 # compiling squid
