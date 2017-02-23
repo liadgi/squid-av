@@ -136,20 +136,23 @@ void Adapter::Antivirus::scan(Answer &answer) {
     signal(SIGHUP, sighand_callback);
     signal(SIGTERM, sighand_callback);
 
+    // VirusTotal API setup calls
     file_scan = VtFile_new();
     VtFile_setProgressCallback(file_scan, progress_callback, NULL);
     VtFile_setApiKey(file_scan, api_key);
 
-
+    // Send the file to VirusTotal.
     ret = scan_file(file_scan, filename); // blocks
       if (ret) {
         printf("Error: %d \n", ret);
       } else {
 
+        // Parse the initial response
         scanResponse = VtFile_getResponse(file_scan);
         ret = VtResponse_getResponseCode(scanResponse, &response_code);
         if (!ret)
         {
+          // Convert the response ro JSON
           strScan = VtResponse_toJSONstr(scanResponse, VT_JSON_FLAG_INDENT);
           if (strScan) {
             printf("Scan Response:\n%s\n", strScan);
