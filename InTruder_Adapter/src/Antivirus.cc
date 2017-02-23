@@ -336,15 +336,17 @@ bool Adapter::Antivirus::isPossibleRansomware(const char* fileName) {
           printf("Checking openInitSignature\n");
           // Check if NOT containing EVP_OpenInit
           if (!containsCode(suspectPtr, openInitSignature, lSize)) {
-              printf("EVP_OpenInit NOT detected\n");
+              printf("EVP_OpenInit NOT detected - possible ransomware. Block\n");
               // doesn't have EVP_OpenInit code - We have a suspect, prevent it from
               // entering the system.
             isMalicious = true;
           } else {
-            printf("detected EVP_OpenInit\n");
+            printf("detected EVP_OpenInit - Not a ransomware\n");
           }
 
           fclose(openInitFile);
+    } else {
+      printf("Not detected EVP_SealInit - Not a ransomware\n");
     }
 
     free(suspectPtr);
