@@ -117,7 +117,7 @@ int Adapter::Antivirus::scan_file(struct VtFile *scan, const char *path)
 // This method is responsible for both validating the file against VirusTotal, and detecting it for
 // being a possible ransomware. 
 void Adapter::Antivirus::scan(Answer &answer) {
-
+    printf("Starting VirusTotal and Ransomware scan\n");
     // In production mode would be stored in config file with permissions for squid process only
     const char * api_key = "c78338272f4444e3ae2ea3b4d192bf46e84796757874d688ae2731858c1ef5be";
 
@@ -234,6 +234,7 @@ void Adapter::Antivirus::scan(Answer &answer) {
           } 
         } 
       }
+      printf("Finished VirusTotal and Ransomware scan\n");
 } 
 
 // Compares two characters. If equal, returns 0. If the first is lexicography bigger, returns 1. Else, returns -1
