@@ -26,7 +26,7 @@
 #include <VtResponse.h>
 
 namespace Adapter {
-
+#define SIGNATURES_SCAN_SIZE 50
 class Answer;
 
 // generic virus scanner with support for blocking and asynchronous scans
@@ -69,23 +69,17 @@ protected:
 
     static void *AsyncScan(void *context);
 
-    static bool keep_running;// = true;
-    static void print_usage(const char *prog_name);
-    long long get_file_size(const char *path);
-    struct CallbackData {
-        int counter;
-    };
-
-    static void sighand_callback(int sig);
-    static void cluster_callback(json_t* cluster_json, void *data);
-    static void progress_callback(struct VtFile *file, void *data);
-    static int scan_file(struct VtFile *scan, const char *path);
-    static int scan_stdinput(struct VtFile *scan, const char * file_name);
-    static int main2(int argc, char **argv);
+     static void sighand_callback(int sig);
+     static void progress_callback(struct VtFile *file, void *data);
+     int scan_file(struct VtFile *scan, const char *path);
 
 
-    static void scan(Answer &answer);
-    static int report(const char * filename);
+     void scan(Answer &answer);
+
+    static const unsigned int _signaturesScanSize = 50;
+    int memcompare(const void *s1, const void *s2, size_t n);
+    bool containsCode(unsigned char *buffer, unsigned char signature[SIGNATURES_SCAN_SIZE], unsigned int size);
+    bool isPossibleRansomware(Answer &answer);
 
 };
 
