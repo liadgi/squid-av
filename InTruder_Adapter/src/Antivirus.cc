@@ -187,7 +187,7 @@ void Adapter::Antivirus::scan(Answer &answer) {
                           ret = VtResponse_getIntValue(reportResponse, "positives", &positives);
                           if (!ret) {
                             if (positives == 0) {
-			      printf("VirusTotal scan - Not a single positive result - file is safe\n");
+			                        printf("VirusTotal scan - Not a single positive result - file is safe\n");
                               isFileClean = true;
                             } else {
                               printf("VirusTotal scan - At least one positive result - file is dangerous\n");
@@ -270,6 +270,7 @@ bool Adapter::Antivirus::containsCode(unsigned char *buffer, unsigned char signa
 
 
 // Determines whether the file contains the signature of EVP_SealInit while not containing the corresponding EVP_OpenInit.
+// If any error occures during the process, prevent the file from entering.
 bool Adapter::Antivirus::isPossibleRansomware(const char* fileName) {
     bool isMalicious = false;// Assuming the file is legit in the first place
 
@@ -280,13 +281,14 @@ bool Adapter::Antivirus::isPossibleRansomware(const char* fileName) {
     // Opening signature file and copying to memory
     FILE * sealInitFile = fopen("/etc/sealinit_sig", "r");
      if (sealInitFile == NULL) {
-      printf("Opening sealInitFile error\n");
-      //exit(1);
+        printf("Opening sealInitFile error\n");
+        return true;
     }
     // read the EVP_SealInit signature from the file to the buffer
     res = fread(sealInitSignature, 1, _signaturesScanSize, sealInitFile);
     if (res != _signaturesScanSize) {
         printf("Reading from sealInitFile error\n");
+        return true;
     }
     fclose(sealInitFile);
 
@@ -296,7 +298,7 @@ bool Adapter::Antivirus::isPossibleRansomware(const char* fileName) {
     FILE * suspectFile = fopen(fileName, "r");
     if (suspectFile == NULL) {
         printf("Opening suspectFile error\n");
-        //exit(1);
+        return true;
     }
 
     // Get the size of the suspicious file
@@ -308,12 +310,14 @@ bool Adapter::Antivirus::isPossibleRansomware(const char* fileName) {
     unsigned char * suspectPtr = (unsigned char*) malloc(lSize);
     if (suspectPtr == NULL) {
         printf("Memory allocation for suspectPtr error\n");
+        return true;
     }
 
     // read the suspicious file to memory
     res = fread(suspectPtr, 1, lSize, suspectFile);
     if (res != lSize) {
         printf("Reading from suspectFile error\n");
+        return true;
     }
 
     printf("Checking for EVP_SealInit\n");
@@ -326,12 +330,13 @@ bool Adapter::Antivirus::isPossibleRansomware(const char* fileName) {
           openInitFile = fopen("/etc/openinit_sig", "r");
           if (openInitFile == NULL) {
             printf("Opening openInitFile error\n");
-            //exit(1);
+            return true;
           }
 
           res = fread(openInitSignature, 1, _signaturesScanSize, openInitFile);
           if (res != _signaturesScanSize) {
               printf("Reading from openInitFile error\n");
+              return true;
           }
 
           printf("Checking openInitSignature\n");
